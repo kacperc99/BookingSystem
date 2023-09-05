@@ -83,7 +83,16 @@ namespace BookingSystem.Controllers
               SecurityAlgorithms.HmacSha256)
             );
             var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
-            return Ok(tokenString);
+        LoggedInUser.Instance.UserId = _context.UserModel.Where(e=>e.Username==username).Select(e=>e.Id).FirstOrDefault();
+        List<int> desks = _context.ReservationModel.Where(x => x.BookignEndDate < DateTime.Now).Select(e=>e.DeskId).ToList();
+        foreach(var desk in desks)
+        {
+          DeskModel deskModel = (from x in _context.DeskModel where x.Id==desk select x).FirstOrDefault();
+          deskModel.DeskStatus = "available";
+        }
+        _context.ReservationModel.RemoveRange(_context.ReservationModel.Where(x => x.BookignEndDate < DateTime.Now));
+        await _context.SaveChangesAsync();
+        return Ok(tokenString);
           }
           
         }

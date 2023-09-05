@@ -22,87 +22,153 @@ namespace BookingSystem.Controllers
         {
             _context = context;
         }
-
+    
         // GET: api/ReservationModels
         [HttpGet]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "admin, gigachad")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "employee, admin, gigachad")]
     public async Task<ActionResult<IEnumerable<ReservationModel>>> GetReservationModel()
         {
-          if (_context.ReservationModel == null)
+      if (_context.ReservationModel == null)
           {
               return NotFound();
           }
-            return await _context.ReservationModel.ToListAsync();
-        }
+      var user = _context.UserModel.Where(e => e.Id == LoggedInUser.Instance.UserId).FirstOrDefault();
+      if(user.Rank=="employee")
+            return await _context.ReservationModel.Where(e=>e.UserId==LoggedInUser.Instance.UserId).ToListAsync();
+      return await _context.ReservationModel.ToListAsync();
+    }
 
-        // GET: api/ReservationModels/5
-        [HttpGet("{id}")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "admin, gigachad")]
-    public async Task<ActionResult<ReservationModel>> GetReservationModel(int id)
-        {
-          if (_context.ReservationModel == null)
-          {
-              return NotFound();
-          }
-            var reservationModel = await _context.ReservationModel.FindAsync(id);
-
-            if (reservationModel == null)
-            {
-                return NotFound();
-            }
-
-            return reservationModel;
-        }
 
         // PUT: api/ReservationModels/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutReservationModel(int id, ReservationModel reservationModel)
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "employee, admin, gigachad")]
+    public async Task<IActionResult> PutReservationModel(int id, DateTime? begin, DateTime? end, int? deskId)
         {
-            if (id != reservationModel.Id)
-            {
-                return BadRequest();
-            }
+             var idek = _context.ReservationModel.Where(e=>e.Id==id).Where(e=>e.UserId==LoggedInUser.Instance.UserId).FirstOrDefault();
+      int? deskidek = null;
+      if (deskId.HasValue)
+      {
+        deskidek = _context.DeskModel.Where(e => e.Id == deskId).Where(e => e.DeskStatus == "available").Select(e => e.Id).FirstOrDefault();
+        if (!deskidek.HasValue || (idek.BookingBeginDate - DateTime.Now).Days<1)
+          return Problem("Desk does not exist or is unavaliable or reservation cannot be edited");
 
-            _context.Entry(reservationModel).State = EntityState.Modified;
-
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!ReservationModelExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
-            }
-
-            return NoContent();
-        }
-
-        // POST: api/ReservationModels
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPost]
-        public async Task<ActionResult<ReservationModel>> PostReservationModel(ReservationModel reservationModel)
+      }
+      if (idek != null)
+      {
+        if(begin!=null && end!=null)
         {
-          if (_context.ReservationModel == null)
+          TimeSpan diff = (TimeSpan)(end - begin);
+          if (DateTime.Compare(DateTime.Now, (DateTime)begin) < 0 && DateTime.Compare(DateTime.Now, (DateTime)end) < 0 
+            && DateTime.Compare((DateTime)begin, (DateTime)end) < 0 && diff.Days > 1 && diff.Days < 7)
           {
-              return Problem("Entity set 'BookingSystemContext.ReservationModel'  is null.");
+            ReservationModel record = (from d in _context.ReservationModel where d.Id == id select d).FirstOrDefault();
+            record.BookingBeginDate = (DateTime)begin;
+            record.BookignEndDate = (DateTime)end;
+            if (deskidek.HasValue)
+            {
+              DeskModel olddesk = (from d in _context.DeskModel where d.Id == record.DeskId select d).FirstOrDefault();
+              olddesk.DeskStatus = "available";
+              record.DeskId = (int)deskId;
+            }
+            _context.SaveChanges();
+            return Ok(record);
           }
-            _context.ReservationModel.Add(reservationModel);
+          return Problem("Dates are incorrect");
+        }
+        else if(begin!=null)
+        {
+          if(DateTime.Compare(DateTime.Now, (DateTime)begin) < 0 && DateTime.Compare((DateTime)begin, idek.BookignEndDate) < 0 
+            && (idek.BookignEndDate - (DateTime)begin).Days>1 
+            && (idek.BookignEndDate - (DateTime)begin).Days <7)
+          {
+            ReservationModel record = (from d in _context.ReservationModel where d.Id == id select d).FirstOrDefault();
+            record.BookingBeginDate = (DateTime)begin;
+            if (deskidek.HasValue)
+            {
+              DeskModel olddesk = (from d in _context.DeskModel where d.Id == record.DeskId select d).FirstOrDefault();
+              olddesk.DeskStatus = "available";
+              record.DeskId = (int)deskId;
+            }
+            _context.SaveChanges();
+            return Ok(record);
+          }
+          return Problem("Dates are incorrect");
+        }
+        else if (end != null)
+        {
+          if(DateTime.Compare(DateTime.Now, (DateTime)end) < 0
+            && DateTime.Compare(idek.BookingBeginDate, (DateTime)end) < 0 && ((DateTime)end - idek.BookingBeginDate).Days > 1 
+            && ((DateTime)end - idek.BookingBeginDate).Days < 7)
+          {
+            ReservationModel record = (from d in _context.ReservationModel where d.Id == id select d).FirstOrDefault();
+            record.BookignEndDate = (DateTime)end;
+            if (deskidek.HasValue)
+            {
+              DeskModel olddesk = (from d in _context.DeskModel where d.Id == record.DeskId select d).FirstOrDefault();
+              olddesk.DeskStatus = "available";
+              record.DeskId = (int)deskId;
+            }
+            _context.SaveChanges();
+            return Ok(record);
+          }
+          return Problem("Dates are incorrect");
+        }
+        else if(deskidek!=null && (idek.BookingBeginDate - DateTime.Now).Days > 1)
+        {
+          ReservationModel record = (from d in _context.ReservationModel where d.Id == id select d).FirstOrDefault();
+          DeskModel olddesk = (from d in _context.DeskModel where d.Id == record.DeskId select d).FirstOrDefault();
+          olddesk.DeskStatus = "available";
+          record.DeskId = (int)deskId;
+          _context.SaveChanges();
+          return Ok(record);
+        }
+        return Problem("Data incorrect");
+            }
+
+
+      return Problem("Error adding records to a database - incorrect ID");
+    }
+
+
+
+    // POST: api/ReservationModels
+    // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+    [HttpPost("{begin}/{end}/{deskId}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "employee, admin, gigachad")]
+    public async Task<ActionResult<ReservationModel>> PostReservationModel(DateTime begin, DateTime end, int deskId)
+    {
+      if (begin != null && end != null && deskId != null)
+      {
+        var diff = end - begin;
+        if (DateTime.Compare(DateTime.Now, begin) < 0 && DateTime.Compare(DateTime.Now, end) < 0 && DateTime.Compare(begin, end) < 0 && diff.Days > 1 && diff.Days < 7)
+        {
+          var check = _context.DeskModel.Where(e => e.Id == deskId).FirstOrDefault();
+          if (check != null && check.DeskStatus == "available")
+          {
+            ReservationModel book = new ReservationModel();
+            book.BookingBeginDate = begin;
+            book.BookignEndDate = end;
+            book.DeskId = deskId;
+            book.UserId = LoggedInUser.Instance.UserId;
+            _context.ReservationModel.Add(book);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetReservationModel", new { id = reservationModel.Id }, reservationModel);
+            DeskModel record = (from d in _context.DeskModel where d.Id == deskId select d).FirstOrDefault();
+            record.DeskStatus = "unavailable";
+            _context.SaveChanges();
+            return Ok(book);
+          }
+          return Problem("Wrong ID");
         }
-
+        return Problem("Incorrect Date provided");
+      }
+      return Problem("Null values provided");
+    }
         // DELETE: api/ReservationModels/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteReservationModel(int id)
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "employee, admin, gigachad")]
+    public async Task<IActionResult> DeleteReservationModel(int id)
         {
             if (_context.ReservationModel == null)
             {
@@ -113,12 +179,17 @@ namespace BookingSystem.Controllers
             {
                 return NotFound();
             }
+      var user = _context.UserModel.Where(e => e.Id == LoggedInUser.Instance.UserId).FirstOrDefault();
+      if (user.Rank == "admin" || user.Rank == "gigachad" || reservationModel.UserId==LoggedInUser.Instance.UserId)
+      {
+              _context.ReservationModel.Remove(reservationModel);
+              await _context.SaveChangesAsync();
 
-            _context.ReservationModel.Remove(reservationModel);
-            await _context.SaveChangesAsync();
-
-            return NoContent();
-        }
+               return NoContent();
+            }
+      return Problem("Operation not permitted");
+    }
+    
 
         private bool ReservationModelExists(int id)
         {
