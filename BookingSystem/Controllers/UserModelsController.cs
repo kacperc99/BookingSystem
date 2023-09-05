@@ -139,7 +139,7 @@ namespace BookingSystem.Controllers
             if(!string.IsNullOrEmpty(username)&& !string.IsNullOrEmpty(password)&& !string.IsNullOrEmpty(passwordrepeat))
             {
                  var usr = _context.UserModel.Where(e => e.Username == username).FirstOrDefault();
-                 if (usr==null)
+                 if (usr==null && password == passwordrepeat)
                  {
                     UserModel usrModel = new UserModel();
                     usrModel.Username = username;
