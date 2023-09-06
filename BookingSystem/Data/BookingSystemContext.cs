@@ -9,17 +9,18 @@ namespace BookingSystem.Data
 {
     public class BookingSystemContext : DbContext
     {
+        public BookingSystemContext() { }
         public BookingSystemContext (DbContextOptions<BookingSystemContext> options)
             : base(options)
         {
         }
 
-        public DbSet<BookingSystem.Model.UserModel> UserModel { get; set; } = default!;
+        public virtual DbSet<BookingSystem.Model.UserModel> UserModel { get; set; } = default!;
 
-        public DbSet<BookingSystem.Model.LocationModel>? LocationModel { get; set; }
+        public virtual DbSet<BookingSystem.Model.LocationModel>? LocationModel { get; set; }
 
-        public DbSet<BookingSystem.Model.DeskModel>? DeskModel { get; set; }
+        public virtual DbSet<BookingSystem.Model.DeskModel>? DeskModel { get; set; }
 
-        public DbSet<BookingSystem.Model.ReservationModel>? ReservationModel { get; set; }
+        public virtual DbSet<BookingSystem.Model.ReservationModel>? ReservationModel { get; set; }
     }
 }

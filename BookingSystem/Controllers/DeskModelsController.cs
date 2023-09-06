@@ -31,7 +31,8 @@ namespace BookingSystem.Controllers
           {
               return NotFound();
           }
-            return await _context.DeskModel.ToListAsync();
+            var desks = await _context.DeskModel.ToListAsync();
+      return Ok(desks);
         }
 
         // GET: api/DeskModels/5
@@ -49,7 +50,7 @@ namespace BookingSystem.Controllers
                 return NotFound();
             }
 
-            return deskModel;
+            return Ok(deskModel);
         }
 
         // PUT: api/DeskModels/5
@@ -58,10 +59,11 @@ namespace BookingSystem.Controllers
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme, Roles = "admin, gigachad")]
     public async Task<IActionResult> PutDeskModel(int id, string deskStatus)
         {
-            int res = _context.DeskModel.Where(e => e.Id == id).Select(e => e.Id).FirstOrDefault();
-            if (id != res || (deskStatus!="available" && deskStatus!="unavailable"))
+            int? res = _context.DeskModel.Where(e => e.Id == id).Select(e => e.Id).FirstOrDefault();
+            var idek = _context.ReservationModel.Where(e=>e.DeskId==id).FirstOrDefault();
+            if (res==null || (deskStatus!="available" && deskStatus!="unavailable") || idek!=null)
             {
-                return BadRequest();
+                return BadRequest("Something got screwed");
             }
       else
       {
@@ -70,6 +72,7 @@ namespace BookingSystem.Controllers
         record.DeskStatus = deskStatus;
 
         _context.SaveChanges();
+        return Ok(record);
       }
 
             return NoContent();
@@ -93,7 +96,7 @@ namespace BookingSystem.Controllers
         desk.LocationID = locationId;
         _context.DeskModel.Add(desk);
         await _context.SaveChangesAsync();
-        return Ok(desk);
+        return desk;
       }
           
             return BadRequest();
@@ -119,7 +122,7 @@ namespace BookingSystem.Controllers
         _context.DeskModel.Remove(deskModel);
         await _context.SaveChangesAsync();
 
-        return NoContent();
+        return Ok(deskModel);
       }
       return BadRequest();
     

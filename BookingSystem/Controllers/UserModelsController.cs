@@ -40,24 +40,6 @@ namespace BookingSystem.Controllers
               return NotFound();
           }
             return await _context.UserModel.ToListAsync();
-        }
-
-        // GET: api/UserModels/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<UserModel>> GetUserModel(int id)
-        {
-          if (_context.UserModel == null)
-          {
-              return NotFound();
-          }
-            var userModel = await _context.UserModel.FindAsync(id);
-
-            if (userModel == null)
-            {
-                return NotFound();
-            }
-
-            return userModel;
         }*/
         [HttpGet("{username}/{password}")]
         public async Task<ActionResult<UserModel>> GetUserModel(string username, string password)
@@ -148,7 +130,7 @@ namespace BookingSystem.Controllers
                     _context.UserModel.Add(usrModel);
                     await _context.SaveChangesAsync();
 
-                     return Ok(usr);
+                     return usrModel;
                   }
                   return BadRequest();
                  
