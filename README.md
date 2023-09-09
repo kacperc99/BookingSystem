@@ -42,5 +42,6 @@ Desk:
 Same with Location, however admins can make desks unavailable at will.
 Reservations:
 Reservations can only be edited if edit takes place at least 24h before beginning of reservation. Otherwise such reservation can only be deleted. Edit option allows user to change being date, end date and/or desk. Get endpoint is accesible by any logged in user, however at least admin is required to see full information about desk.
+NOTE: Please provide date in a format YYYY-MM-DDTHH:MM:SSZ (example: 2023-09-08T10:00:00Z).
 
 Well, that's all. Sadly lots of things are missing due to either my lack knowledge (forntend) or technical issues (unit tests, services). I hope you will find that small project decent nonetheless.
